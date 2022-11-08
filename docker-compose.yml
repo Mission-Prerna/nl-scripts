@@ -1,9 +1,11 @@
 version: '3.9'
 services:
   web:
+    container_name: pl-script-nest
     build:
       context: .
     env_file:
       - .env
+    command: yarn run start:prod
     ports:
-      - '3000:3333'
+      - '${PORT}:3000'
