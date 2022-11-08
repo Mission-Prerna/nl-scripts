@@ -1,0 +1,71 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["interactiveTransactions"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model visit_wise_student_result {
+  id                    BigInt    @id(map: "visit_wise_student_result_pk") @default(autoincrement())
+  visit_id              Int?
+  competency            String?   @db.VarChar
+  current_student_count Int?
+  start_time            DateTime? @db.Timestamp(6)
+  end_time              DateTime? @db.Timestamp(6)
+  achievement           Int?
+  total_questions       Int?
+  success_criteria      Int?
+  view_type             String?   @db.VarChar
+}
+
+model assessment_visit_results {
+  id               Int       @id(map: "assessment_visit_results_pk") @unique(map: "assessment_visit_results_unique")
+  created_at       DateTime? @db.Timestamptz(6)
+  grade            Int?
+  subject          String?
+  module_result    String?
+  is_visited       Boolean?
+  mentor_id        Int?
+  no_of_student    Int?
+  udise_code       String?
+  total_time_taken String?
+  actor            String?
+  block            String?
+}
+
+model script_performance_report {
+  id               Int     @id(map: "script_performance_report_pk") @default(autoincrement())
+  district         String  @db.VarChar
+  block            String  @db.VarChar
+  school_udise     String? @db.VarChar
+  grade            Int?
+  subject          String? @db.VarChar
+  competency       String? @db.VarChar
+  student_accessed Int?
+  nipun_students   Int?
+
+  @@unique([school_udise, grade, subject, competency], map: "script_performance_report_sgsc")
+}
+
+model temp_visit_wise_student_result {
+  id                    BigInt    @id(map: "temp_visit_wise_student_result_pk") @default(autoincrement())
+  visit_id              Int?
+  competency            String?   @db.VarChar
+  current_student_count Int?
+  start_time            DateTime? @db.Timestamp(6)
+  end_time              DateTime? @db.Timestamp(6)
+  achievement           Int?
+  total_questions       Int?
+  success_criteria      Int?
+  view_type             String?   @db.VarChar
+}
+
+model script_config {
+  performance_last_process_id        Int
+  id                                 Int  @id(map: "scipt_config_pk")
+  perf_create_id                     Int?
+  visit_wise_student_result_visit_id Int?
+}
