@@ -7,16 +7,16 @@ export class AppController {
 
   @Get('/process-nipun')
   async processNipun() {
-    return this.appService.processNipunTask();
+    return this.appService.processContinuousNipunTask();
   }
 
   @Get('/process-visits')
   async processModuleResultForVisitWiseStudentResult() {
-    return this.appService.processModuleResultForVisitWiseStudentResult();
+    return this.appService.processContinuousModuleResultForVisitWiseStudentResult();
   }
   @Get('/process-competency-mapping')
   async processCompetencyMapping() {
-    return this.appService.processCompetencyMapping();
+    return this.appService.processContinuousCompetencyMapping();
   }
 
   @Get('/process-compliance-data')
