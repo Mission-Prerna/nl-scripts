@@ -3,7 +3,8 @@ import { PrismaService } from './prisma.service';
 
 @Injectable()
 export class AppService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) {
+  }
 
   async processModuleResultForVisitWiseStudentResult() {
     const scriptConfig: any = await this.prisma
@@ -29,7 +30,7 @@ export class AppService {
             visit_id: assessmentVisitResult.id,
             competency: module_result.studentResults.competency,
             current_student_count:
-              module_result.studentResults.currentStudentCount,
+            module_result.studentResults.currentStudentCount,
             start_time: new Date(
               module_result.studentResults.moduleResult.startTime,
             ),
@@ -38,9 +39,9 @@ export class AppService {
             ),
             achievement: module_result.studentResults.moduleResult.achievement,
             total_questions:
-              module_result.studentResults.moduleResult.totalQuestions,
+            module_result.studentResults.moduleResult.totalQuestions,
             success_criteria:
-              module_result.studentResults.moduleResult.success_criteria,
+            module_result.studentResults.moduleResult.success_criteria,
             view_type: module_result.viewType,
           });
         },
@@ -56,7 +57,22 @@ export class AppService {
           .$queryRaw`update script_config  set visit_wise_student_result_visit_id=${lastInsertedId}`,
       ]);
     }
-    return `Picking 1000 records, Found and Records processed: ${result.length}`;
+    return result.length;
+  }
+
+  async processContinuousModuleResultForVisitWiseStudentResult() {
+    let totalDataProcessed = 0;
+    let totalBatchCount = 0;
+    while (true) {
+      totalBatchCount += 1000;
+      const noOfDataProcessed =
+        await this.processModuleResultForVisitWiseStudentResult();
+      totalDataProcessed += noOfDataProcessed;
+      if (noOfDataProcessed == 0) {
+        break;
+      }
+    }
+    return `Picking ${totalBatchCount} records, Found and Records processed: ${totalDataProcessed}`;
   }
 
   async processNipunTask() {
@@ -156,21 +172,35 @@ export class AppService {
         await tx.$queryRaw`update script_config  set performance_last_process_id=${assessmentVisitResult.id}`;
       });
     }
-    return `Picking 1000 records, Found and Records processed: ${result}`;
+    return result.length;
   }
 
-  async processCompetencyMapping() {
+  async processContinuousNipunTask() {
+    let totalDataProcessed = 0;
+    let totalBatchCount = 0;
+    while (true) {
+      totalBatchCount += 1000;
+      const noOfDataProcessed = await this.processNipunTask();
+      totalDataProcessed += noOfDataProcessed;
+      if (noOfDataProcessed == 0) {
+        break;
+      }
+    }
+    return `Picking ${totalBatchCount} records, Found and Records processed: ${totalDataProcessed}`;
+  }
+
+  async processCompetencyMapping(batchSize) {
     const componentMappings: any = await this.prisma
       .$queryRaw`select * from competency_mapping`;
     const componentMappingIdMap: any = {};
     componentMappings.forEach((componentMapping) => {
       componentMappingIdMap[
-        componentMapping.grade +
-          '_' +
-          componentMapping.subject +
-          '_' +
-          componentMapping.learning_outcome
-      ] = componentMapping.id;
+      componentMapping.grade +
+      '_' +
+      componentMapping.subject +
+      '_' +
+      componentMapping.learning_outcome
+        ] = componentMapping.id;
     });
     const scriptConfig: any = await this.prisma
       .$queryRaw`select perf_create_id from script_config where id=1`;
@@ -184,7 +214,7 @@ export class AppService {
       orderBy: {
         id: 'asc',
       },
-      take: 1000,
+      take: batchSize,
     });
     for (const assessmentVisitResult of result) {
       let isCompetencyNotFound = false;
@@ -193,12 +223,12 @@ export class AppService {
         (module_result) => {
           const compId =
             componentMappingIdMap[
-              module_result.studentResults.grade +
-                '_' +
-                module_result.studentResults.subject +
-                '_' +
-                module_result.studentResults.competency
-            ];
+            module_result.studentResults.grade +
+            '_' +
+            module_result.studentResults.subject +
+            '_' +
+            module_result.studentResults.competency
+              ];
           if (!compId) {
             isCompetencyNotFound = true;
           } else {
@@ -220,7 +250,22 @@ export class AppService {
       }
     }
 
-    return `Picking 1000 records, Found and Records processed: ${result.length}`;
+    return result.length;
+  }
+
+  async processContinuousCompetencyMapping() {
+    const batchSize = 1000;
+    let totalDataProcessed = 0;
+    let totalBatchCount = 0;
+    while (true) {
+      totalBatchCount += batchSize;
+      const noOfDataProcessed = await this.processCompetencyMapping(batchSize);
+      totalDataProcessed += noOfDataProcessed;
+      if (noOfDataProcessed == 0) {
+        break;
+      }
+    }
+    return `Picking ${totalBatchCount} records, Found and Records processed: ${totalDataProcessed}`;
   }
 
   async processComplianceData() {
