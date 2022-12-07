@@ -3,8 +3,7 @@ import { PrismaService } from './prisma.service';
 
 @Injectable()
 export class AppService {
-  constructor(private prisma: PrismaService) {
-  }
+  constructor(private prisma: PrismaService) {}
 
   async processModuleResultForVisitWiseStudentResult() {
     const scriptConfig: any = await this.prisma
@@ -30,7 +29,7 @@ export class AppService {
             visit_id: assessmentVisitResult.id,
             competency: module_result.studentResults.competency,
             current_student_count:
-            module_result.studentResults.currentStudentCount,
+              module_result.studentResults.currentStudentCount,
             start_time: new Date(
               module_result.studentResults.moduleResult.startTime,
             ),
@@ -39,9 +38,9 @@ export class AppService {
             ),
             achievement: module_result.studentResults.moduleResult.achievement,
             total_questions:
-            module_result.studentResults.moduleResult.totalQuestions,
+              module_result.studentResults.moduleResult.totalQuestions,
             success_criteria:
-            module_result.studentResults.moduleResult.success_criteria,
+              module_result.studentResults.moduleResult.success_criteria,
             view_type: module_result.viewType,
           });
         },
@@ -73,6 +72,110 @@ export class AppService {
       }
     }
     return `Picking ${totalBatchCount} records, Found and Records processed: ${totalDataProcessed}`;
+  }
+
+  async processNipunMonthWiseTask() {
+    const scriptConfig: any = await this.prisma
+      .$queryRaw`select month_wise_performance_last_process_id from script_config where id=1`;
+    const performanceLastProcessId = parseInt(
+      scriptConfig[0].month_wise_performance_last_process_id ?? 0,
+    );
+    const result = await this.prisma.assessment_visit_results.findMany({
+      where: {
+        AND: [
+          {
+            id: {
+              gt: performanceLastProcessId,
+            },
+          },
+        ],
+        NOT: [
+          {
+            mentor_id: null,
+          },
+        ],
+      },
+      orderBy: {
+        id: 'asc',
+      },
+      take: 1000,
+    });
+    for (const assessmentVisitResult of result) {
+      await this.prisma.$transaction(async (tx) => {
+        for (const module_result of JSON.parse(
+          assessmentVisitResult.module_result,
+        )) {
+          const res = module_result.studentResults.moduleResult;
+          let isNipun = false;
+
+          if (module_result.viewType === 'odk') {
+            if (
+              res.totalQuestions > 0 &&
+              (res.achievement * 100) / res.totalQuestions >= 75
+            ) {
+              isNipun = true;
+            }
+          } else {
+            if (
+              module_result.studentResults.grade == 1 &&
+              res.achievement >= 45
+            ) {
+              isNipun = true;
+            } else if (
+              module_result.studentResults.grade == 2 &&
+              res.achievement >= 60
+            ) {
+              isNipun = true;
+            } else if (
+              module_result.studentResults.grade == 3 &&
+              res.achievement >= 75
+            ) {
+              isNipun = true;
+            }
+          }
+          const monthNumber =
+            new Date(
+              module_result.studentResults.moduleResult.startTime,
+            ).getMonth() + 1;
+          const scriptPerformance =
+            await tx.script_performance_month_wise_report.findFirst({
+              where: {
+                competency: module_result.studentResults.competency,
+                grade: module_result.studentResults.grade,
+                month: monthNumber,
+                subject: module_result.studentResults.subject,
+                school_udise: module_result.studentResults.schoolsData.udise,
+              },
+            });
+          if (scriptPerformance) {
+            await tx.script_performance_month_wise_report.update({
+              where: { id: scriptPerformance.id },
+              data: {
+                student_accessed: scriptPerformance.student_accessed + 1,
+                nipun_students:
+                  scriptPerformance.nipun_students + (isNipun ? 1 : 0),
+              },
+            });
+          } else {
+            await tx.script_performance_month_wise_report.create({
+              data: {
+                district: module_result.studentResults.schoolsData.district,
+                block: module_result.studentResults.schoolsData.block,
+                competency: module_result.studentResults.competency,
+                subject: module_result.studentResults.subject,
+                month: monthNumber,
+                grade: module_result.studentResults.grade,
+                school_udise: module_result.studentResults.schoolsData.udise,
+                student_accessed: 1,
+                nipun_students: isNipun ? 1 : 0,
+              },
+            });
+          }
+        }
+        await tx.$queryRaw`update script_config  set month_wise_performance_last_process_id=${assessmentVisitResult.id}`;
+      });
+    }
+    return result.length;
   }
 
   async processNipunTask() {
@@ -189,18 +292,32 @@ export class AppService {
     return `Picking ${totalBatchCount} records, Found and Records processed: ${totalDataProcessed}`;
   }
 
+  async processContinuousMonthWiseNipunTask() {
+    let totalDataProcessed = 0;
+    let totalBatchCount = 0;
+    while (true) {
+      totalBatchCount += 1000;
+      const noOfDataProcessed = await this.processNipunMonthWiseTask();
+      totalDataProcessed += noOfDataProcessed;
+      if (noOfDataProcessed == 0) {
+        break;
+      }
+    }
+    return `Picking ${totalBatchCount} records, Found and Records processed: ${totalDataProcessed}`;
+  }
+
   async processCompetencyMapping(batchSize) {
     const componentMappings: any = await this.prisma
       .$queryRaw`select * from competency_mapping`;
     const componentMappingIdMap: any = {};
     componentMappings.forEach((componentMapping) => {
       componentMappingIdMap[
-      componentMapping.grade +
-      '_' +
-      componentMapping.subject +
-      '_' +
-      componentMapping.learning_outcome
-        ] = componentMapping.id;
+        componentMapping.grade +
+          '_' +
+          componentMapping.subject +
+          '_' +
+          componentMapping.learning_outcome
+      ] = componentMapping.id;
     });
     const scriptConfig: any = await this.prisma
       .$queryRaw`select perf_create_id from script_config where id=1`;
@@ -223,12 +340,12 @@ export class AppService {
         (module_result) => {
           const compId =
             componentMappingIdMap[
-            module_result.studentResults.grade +
-            '_' +
-            module_result.studentResults.subject +
-            '_' +
-            module_result.studentResults.competency
-              ];
+              module_result.studentResults.grade +
+                '_' +
+                module_result.studentResults.subject +
+                '_' +
+                module_result.studentResults.competency
+            ];
           if (!compId) {
             isCompetencyNotFound = true;
           } else {

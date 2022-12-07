@@ -9,6 +9,10 @@ export class AppController {
   async processNipun() {
     return this.appService.processContinuousNipunTask();
   }
+  @Get('/process-month-wise-nipun')
+  async processContinuousMonthWiseNipunTask() {
+    return this.appService.processContinuousMonthWiseNipunTask();
+  }
 
   @Get('/process-visits')
   async processModuleResultForVisitWiseStudentResult() {

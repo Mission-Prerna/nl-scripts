@@ -69,3 +69,57 @@ model script_config {
   perf_create_id                     Int?
   visit_wise_student_result_visit_id Int?
 }
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model assessment_visit_result_date_map {
+  visit_id     Int?
+  timestamp    DateTime? @db.Timestamp(6)
+  mentor_id    Int?
+  school_udise BigInt?
+
+  @@ignore
+}
+
+model competency_mapping {
+  id                      Int                       @id @default(autoincrement())
+  grade                   String                    @db.VarChar
+  subject                 String?                   @db.VarChar
+  learning_outcome        String?
+  competency_id           Int?
+  workflow_refids_mapping workflow_refids_mapping[]
+}
+
+model script_performance_month_wise_report {
+  id               Int     @id(map: "script_performance_month_wise_report_pk") @default(autoincrement())
+  district         String  @db.VarChar
+  block            String  @db.VarChar
+  school_udise     String? @db.VarChar
+  grade            Int?
+  subject          String? @db.VarChar
+  competency       String? @db.VarChar
+  month            Int?
+  student_accessed Int?
+  nipun_students   Int?
+
+  @@index([competency], map: "sprmw_competency_idx")
+  @@index([grade], map: "sprmw_grade_idx")
+  @@index([school_udise], map: "sprmw_school_udise_idx")
+  @@index([subject], map: "sprmw_subject_idx")
+}
+
+
+model workflow_refids_mapping {
+  id                 BigInt             @id @default(autoincrement())
+  grade              Int
+  subject            String
+  competency_id      Int
+  type               String
+  is_active          Boolean            @default(true)
+  ref_ids            Json               @default(dbgenerated("jsonb_build_array()"))
+  created_at         DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime           @default(now()) @db.Timestamptz(6)
+  month              String             @db.VarChar
+  competency_mapping competency_mapping @relation(fields: [competency_id], references: [id], onDelete: SetNull, onUpdate: SetNull)
+
+  @@unique([competency_id, grade, subject, type, month], map: "workflow_refids_mapping_competency_id_grade_subject_type_month_")
+}
