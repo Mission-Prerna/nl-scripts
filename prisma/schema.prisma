@@ -98,6 +98,7 @@ model script_performance_month_wise_report {
   subject          String? @db.VarChar
   competency       String? @db.VarChar
   month            Int?
+  year             Int?
   student_accessed Int?
   nipun_students   Int?
 

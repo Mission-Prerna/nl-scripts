@@ -3,7 +3,8 @@ import { PrismaService } from './prisma.service';
 
 @Injectable()
 export class AppService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) {
+  }
 
   async processModuleResultForVisitWiseStudentResult() {
     const scriptConfig: any = await this.prisma
@@ -29,7 +30,7 @@ export class AppService {
             visit_id: assessmentVisitResult.id,
             competency: module_result.studentResults.competency,
             current_student_count:
-              module_result.studentResults.currentStudentCount,
+            module_result.studentResults.currentStudentCount,
             start_time: new Date(
               module_result.studentResults.moduleResult.startTime,
             ),
@@ -38,9 +39,9 @@ export class AppService {
             ),
             achievement: module_result.studentResults.moduleResult.achievement,
             total_questions:
-              module_result.studentResults.moduleResult.totalQuestions,
+            module_result.studentResults.moduleResult.totalQuestions,
             success_criteria:
-              module_result.studentResults.moduleResult.success_criteria,
+            module_result.studentResults.moduleResult.success_criteria,
             view_type: module_result.viewType,
           });
         },
@@ -133,6 +134,9 @@ export class AppService {
               isNipun = true;
             }
           }
+          const yearNumber = new Date(
+            module_result.studentResults.moduleResult.startTime,
+          ).getFullYear();
           const monthNumber =
             new Date(
               module_result.studentResults.moduleResult.startTime,
@@ -143,6 +147,7 @@ export class AppService {
                 competency: module_result.studentResults.competency,
                 grade: module_result.studentResults.grade,
                 month: monthNumber,
+                year: yearNumber,
                 subject: module_result.studentResults.subject,
                 school_udise: module_result.studentResults.schoolsData.udise,
               },
@@ -164,6 +169,7 @@ export class AppService {
                 competency: module_result.studentResults.competency,
                 subject: module_result.studentResults.subject,
                 month: monthNumber,
+                year: yearNumber,
                 grade: module_result.studentResults.grade,
                 school_udise: module_result.studentResults.schoolsData.udise,
                 student_accessed: 1,
@@ -312,12 +318,12 @@ export class AppService {
     const componentMappingIdMap: any = {};
     componentMappings.forEach((componentMapping) => {
       componentMappingIdMap[
-        componentMapping.grade +
-          '_' +
-          componentMapping.subject +
-          '_' +
-          componentMapping.learning_outcome
-      ] = componentMapping.id;
+      componentMapping.grade +
+      '_' +
+      componentMapping.subject +
+      '_' +
+      componentMapping.learning_outcome
+        ] = componentMapping.id;
     });
     const scriptConfig: any = await this.prisma
       .$queryRaw`select perf_create_id from script_config where id=1`;
@@ -340,12 +346,12 @@ export class AppService {
         (module_result) => {
           const compId =
             componentMappingIdMap[
-              module_result.studentResults.grade +
-                '_' +
-                module_result.studentResults.subject +
-                '_' +
-                module_result.studentResults.competency
-            ];
+            module_result.studentResults.grade +
+            '_' +
+            module_result.studentResults.subject +
+            '_' +
+            module_result.studentResults.competency
+              ];
           if (!compId) {
             isCompetencyNotFound = true;
           } else {
