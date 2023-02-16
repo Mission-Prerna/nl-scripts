@@ -21,20 +21,39 @@ model visit_wise_student_result {
   view_type             String?   @db.VarChar
 }
 
+
 model assessment_visit_results {
-  id               Int       @id(map: "assessment_visit_results_pk") @unique(map: "assessment_visit_results_unique")
-  created_at       DateTime? @db.Timestamptz(6)
-  grade            Int?
-  subject          String?
-  module_result    String?
-  is_visited       Boolean?
+  id               Int      @id @default(autoincrement())
+  created_at       DateTime @default(now()) @db.Timestamptz(6)
+  grade            Int
+  subject          String
+  module_result    String
+  is_visited       Boolean  @default(false)
   mentor_id        Int?
-  no_of_student    Int?
-  udise_code       String?
-  total_time_taken String?
-  actor            String?
+  no_of_student    Int      @default(0)
+  udise_code       String
+  total_time_taken String   @default(dbgenerated("0"))
+  actor            String?  @default("mentor")
   block            String?
+  student_session  String?
+  assessment_type  String   @default(dbgenerated("btrim(''::text)")) @db.Char
+  udise            BigInt   @default(0)
+  block_id         Int      @default(0)
+  time_taken       Int      @default(0)
+  actor_id         Int      @default(0) @db.SmallInt
+
+  @@index([actor, block], map: "assessment_visit_result_actor_block_index")
+  @@index([actor], map: "assessment_visit_result_actor_index")
+  @@index([block], map: "assessment_visit_result_block_index")
+  @@index([actor_id, block_id], map: "idx_assessment_visit_results_actor_block_id")
+  @@index([actor_id], map: "idx_assessment_visit_results_actor_id")
+  @@index([block_id], map: "idx_assessment_visit_results_block_id")
+  @@index([created_at, mentor_id], map: "idx_assessment_visit_results_created_at_mentor_id")
+  @@index([mentor_id], map: "idx_assessment_visit_results_mentor_id")
+  @@index([udise], map: "idx_assessment_visit_results_udise")
+  @@index([udise_code], map: "idx_assessment_visit_results_udise_code")
 }
+
 
 model script_performance_report {
   id               Int     @id(map: "script_performance_report_pk") @default(autoincrement())
@@ -123,4 +142,31 @@ model workflow_refids_mapping {
   competency_mapping competency_mapping @relation(fields: [competency_id], references: [id], onDelete: SetNull, onUpdate: SetNull)
 
   @@unique([competency_id, grade, subject, type, month], map: "workflow_refids_mapping_competency_id_grade_subject_type_month_")
+}
+
+
+model script_performance_report_mentor_wise {
+  id               Int       @id(map: "script_performance_report_mentor_wise_pk") @default(autoincrement())
+  district         String    @db.VarChar
+  block            String    @db.VarChar
+  school_udise     String?   @db.VarChar
+  grade            Int?
+  subject          String?   @db.VarChar
+  competency       String?   @db.VarChar
+  student_accessed Int?
+  nipun_students   Int?
+  mentor_id        Int?
+  assessment_type  String?   @db.VarChar
+  actor            String?   @db.VarChar
+  created_at       DateTime? @db.Date
+
+  @@unique([school_udise, grade, subject, competency, mentor_id, assessment_type, actor, created_at], map: "scpmw_school_udise_grade_subject_competency_mentor_id_assessmen")
+  @@index([actor], map: "scpmw_actor_index")
+  @@index([assessment_type], map: "scpmw_assessment_type_index")
+  @@index([competency], map: "scpmw_competency_idx")
+  @@index([created_at], map: "scpmw_created_at_index")
+  @@index([grade], map: "scpmw_grade_idx")
+  @@index([mentor_id], map: "scpmw_mentor_id_index")
+  @@index([school_udise], map: "scpmw_school_udise_idx")
+  @@index([subject], map: "scpmw_subject_idx")
 }
