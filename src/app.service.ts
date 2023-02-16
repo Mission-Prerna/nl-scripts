@@ -189,7 +189,7 @@ export class AppService {
       .$queryRaw`select performance_last_process_id from script_config where id=1`;
     const performanceLastProcessId =
       scriptConfig[0].performance_last_process_id ?? 0;
-    console.log(performanceLastProcessId);
+
     const result = await this.prisma.assessment_visit_results.findMany({
       where: {
         AND: [
@@ -212,6 +212,8 @@ export class AppService {
     });
     for (const assessmentVisitResult of result) {
       await this.prisma.$transaction(async (tx) => {
+        const date = new Date(assessmentVisitResult.created_at);
+
         for (const module_result of JSON.parse(
           assessmentVisitResult.module_result,
         )) {
@@ -243,19 +245,22 @@ export class AppService {
               isNipun = true;
             }
           }
-
           const scriptPerformance =
-            await tx.script_performance_report.findFirst({
+            await tx.script_performance_report_mentor_wise.findFirst({
               where: {
                 competency: module_result.studentResults.competency,
                 grade: module_result.studentResults.grade,
                 subject: module_result.studentResults.subject,
                 school_udise: module_result.studentResults.schoolsData.udise,
+                mentor_id : assessmentVisitResult.mentor_id ?? 0,
+                assessment_type: assessmentVisitResult.assessment_type ?? '-',
+                actor: assessmentVisitResult.actor ?? '-',
+                created_at: date,
               },
             });
-          console.log(scriptPerformance);
+
           if (scriptPerformance) {
-            await tx.script_performance_report.update({
+            await tx.script_performance_report_mentor_wise.update({
               where: { id: scriptPerformance.id },
               data: {
                 student_accessed: scriptPerformance.student_accessed + 1,
@@ -264,7 +269,7 @@ export class AppService {
               },
             });
           } else {
-            await tx.script_performance_report.create({
+            await tx.script_performance_report_mentor_wise.create({
               data: {
                 district: module_result.studentResults.schoolsData.district,
                 block: module_result.studentResults.schoolsData.block,
@@ -274,6 +279,10 @@ export class AppService {
                 school_udise: module_result.studentResults.schoolsData.udise,
                 student_accessed: 1,
                 nipun_students: isNipun ? 1 : 0,
+                mentor_id: assessmentVisitResult.mentor_id ?? 0,
+                assessment_type: assessmentVisitResult.assessment_type ?? '-',
+                actor: assessmentVisitResult.actor ?? '-',
+                created_at: date,
               },
             });
           }
@@ -287,7 +296,7 @@ export class AppService {
   async processContinuousNipunTask() {
     let totalDataProcessed = 0;
     let totalBatchCount = 0;
-    while (true) {
+    while (totalBatchCount < 100000) {
       totalBatchCount += 1000;
       const noOfDataProcessed = await this.processNipunTask();
       totalDataProcessed += noOfDataProcessed;
